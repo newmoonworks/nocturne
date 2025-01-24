@@ -1,0 +1,27 @@
+{
+  "name": "iris",
+  "version": "1.0.0",
+  "description": "Node JS process manager",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx origin/index.ts",
+    "compile": "ttsc",
+    "production": "node -r tsconfig-paths/register build/origin/index.js"
+  },
+  "type": "module",
+  "author": "Newmoon Works",
+  "license": "ISC",
+  "dependencies": {
+    "bson": "^6.10.1",
+    "chalk": "^5.4.1",
+    "child_process": "^1.0.2",
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7",
+    "tsconfig-paths": "^4.2.0",
+    "uuidv4": "^6.2.13",
+    "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7"
+  }
+}

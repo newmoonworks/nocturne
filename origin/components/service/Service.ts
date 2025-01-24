@@ -1,0 +1,72 @@
+import { ServiceStatus, IService } from "../../types";
+import Timer from "./Timer";
+
+import { spawn, exec, ChildProcess } from "child_process";
+import { uuid } from 'uuidv4';
+import fs from "fs";
+import path from "path";
+
+export default class Service implements IService { 
+    public process: ChildProcess = null;
+    public name: string;
+    public uuid: string;
+    public path: string;
+    public execute: string;
+    public timer: Timer = new Timer();
+    public status: ServiceStatus = ServiceStatus.OFFLINE;
+
+    constructor(name: string, path: string, uuid: string, attributes?: { execute?: string; }) {
+        this.name = name;
+        this.path = path;
+        this.uuid = uuid;
+
+        if (attributes?.execute) this.execute = attributes.execute;
+    }
+
+    public async start(): Promise<void> {
+        new Promise((resolve, reject) => {
+            if (this.status == ServiceStatus.IDLE || this.status == ServiceStatus.ONLINE) reject(new Error("Service is already running"));
+
+            if (this.execute) this.controlledRun();
+            else this.pathRun();
+
+            this.timer.start();
+            this.status = ServiceStatus.ONLINE;
+
+            this.process.on('close', (code) => {
+                this.stop();
+            })
+
+            this.process.on('exit', (code) => {
+                this.stop();
+            })
+
+            this.process.on('error', (error) => {
+                this.status = ServiceStatus.CRASHED;
+
+                console.error('Failed to start process:', error);
+            });
+
+            resolve("Service successfully started");
+        });
+    }
+
+    public async stop(): Promise<void> {
+        this.timer.stop();
+        this.status = ServiceStatus.OFFLINE;
+    }
+
+    private controlledRun(): void {
+        this.process = spawn('npm', [this.execute], {
+            cwd: this.path,
+            stdio: 'inherit',
+            shell: true
+        });
+    }
+
+    private pathRun(): void {
+        this.process = spawn('node', [this.path], { stdio: 'inherit' });
+    }
+
+
+}

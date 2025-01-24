@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    /* Language and Environment */
+    /* Modules */
+    "moduleResolution": "node", // Ensure module resolution is set to node for compatibility
+    "allowSyntheticDefaultImports": true,
+    // "outFile": "./",                                  /* Specify a file that bundles all outputs into one JavaScript file. If 'declaration' is true, also designates a file that bundles all .d.ts output. */
+    "outDir": "./build" /* Specify an output folder for all emitted files. */,
+    "esModuleInterop": true /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */,
+    "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
+
+    /* Type Checking */
+    "strict": false /* Enable all strict type-checking options. */,
+    "resolveJsonModule": true,
+    "module": "ES2020", // Use CommonJS for Node.js compatibility
+    "target": "ES2020", // Target ES6 or newer
+    "lib": ["es6", "dom", "esnext"],
+    "types": ["node"], // Include Node.js type definitions
+    "skipLibCheck": true,
+    "baseUrl": "./",
+
+    "paths": {
+      "@*": ["origin/*"]
+    },
+  }
+}

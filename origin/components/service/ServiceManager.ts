@@ -1,0 +1,192 @@
+import { ServiceStatus } from "@types";
+import Service from "./Service";
+
+import { BSON, Document } from "bson";
+import * as fs from "fs";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+import { uuid } from 'uuidv4';
+
+interface JSONService {
+    name: string;
+    path: string;
+    uuid: string;
+    execute?: string;
+}
+
+interface DeserializedData {
+    services: JSONService[];
+}
+
+
+export default class ServiceManager {
+    private static readonly __filename = fileURLToPath(import.meta.url);
+    private static readonly __dirname = dirname(ServiceManager.__filename);
+    private static readonly serviceListPath: string = resolve(ServiceManager.__dirname, "../../../services.bson");
+
+    public static serviceList: Service[] = [];
+
+    constructor() {
+        ServiceManager.initializeServices();
+    }
+
+    private static getDeserializedData():  DeserializedData {
+        let deserializedData:  DeserializedData;
+    
+        // Check if the file exists and is not empty
+        if (fs.existsSync(this.serviceListPath) && fs.statSync(this.serviceListPath).size > 0) {
+            const bsonFileBuffer = fs.readFileSync(this.serviceListPath);
+            deserializedData = BSON.deserialize(bsonFileBuffer) as  DeserializedData;
+        } else {
+            // Initialize with a default structure if file is empty or missing
+            deserializedData = { services: [] };
+        }
+
+        return deserializedData as  DeserializedData;
+    }
+
+    /**
+     * 
+     * @param name 
+     * @param path 
+     * @param execute 
+     */
+    public static async constructService(name: string, path: string, execute?: string): Promise<Service> {
+        let deserializedData = ServiceManager.getDeserializedData();
+        const generatedUUID: string = uuid();
+    
+        // Create the new service object
+        const service = {
+            name: name,
+            path: path,
+            uuid: generatedUUID,
+            execute: execute
+        } as JSONService ;
+    
+        // Add the new service to the list
+        deserializedData.services.push(service);
+    
+        // Serialize the updated data and write it back to the file
+        const updatedBsonData = BSON.serialize(deserializedData);
+        fs.writeFileSync(this.serviceListPath, updatedBsonData);
+    
+        // Initialize the service in memory
+        console.log("service made")
+        return await this.initializeService(name, path, generatedUUID, execute);
+    }
+
+    /**
+     * 
+     * @param uuid 
+     */
+    public static async deconstructService(uuid: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            let deserializedData = ServiceManager.getDeserializedData();
+    
+            for (let i = 0; i < deserializedData.services.length; i++) {
+                if (deserializedData.services[i].uuid === uuid) {
+                    console.log("UUID found. Deconstructing service...");
+                    deserializedData.services.splice(i, 1);
+                    ServiceManager.terminateService({ index: i });
+    
+                    const updatedBsonData = BSON.serialize(deserializedData);
+                    fs.writeFileSync(this.serviceListPath, updatedBsonData);
+                    resolve();
+                    return; // Exit after resolving.
+                }
+            }
+    
+            console.log("UUID not found.");
+            reject(new Error("Service not found."));
+        });
+    }
+    
+
+    /**
+     * 
+     * @param name 
+     * @param path 
+     * @param uuid 
+     * @param execute 
+     */
+    public static async initializeService(name: string, path: string, uuid: string, execute?: string): Promise<Service> {
+        return new Promise((resolve, reject) => {
+            try {
+                const service = new Service(name, path, uuid, { execute });
+        
+                ServiceManager.serviceList.push(service);
+        
+                // Resolve the promise with the created service
+                resolve(service);
+            } catch (error) {
+                // Reject the promise with an error if something goes wrong
+                reject(error);
+            }
+        });
+    }
+
+    /**
+     * 
+     * @param criterea 
+     * @returns 
+     */
+    public static terminateService(criterea: { service?: Service, uuid?: string, index?: number }): void {
+        if (criterea.index) {
+            ServiceManager.serviceList.splice(criterea.index, 1);
+            return;
+        }
+
+        const filteredUUID = uuid ? uuid : criterea.service.uuid;
+
+        for (let i = 0; i < ServiceManager.serviceList.length; i++) {
+            if (ServiceManager.serviceList[i].uuid == filteredUUID) {
+                ServiceManager.serviceList.splice(i, 1);
+            }
+        }
+    }
+
+    /**
+     * 
+     */
+    private static initializeServices(): void {
+        const bsonFileBuffer = fs.readFileSync(ServiceManager.serviceListPath);
+
+        // Deserialize the BSON data back to an object
+        const deserializedData = BSON.deserialize(bsonFileBuffer);
+
+        for (const service of deserializedData.services) {
+            this.initializeService(service.name, service.path, service.uuid, service.execute);
+        }
+    }
+
+    public static fetchService(uuid: string): Service | null {
+        for (const service of ServiceManager.serviceList) {
+            console.log("searched")
+            if (service.uuid == uuid) {
+                console.log("gotcha")
+                return service;
+            }
+        }
+
+        return null;
+    }
+
+    // public static write() {
+    //     const data = {
+    //         name: "a service",
+    //         path: "../test.js",
+    //         uuid: "dsadsadadsa"
+    //     }
+
+    //     const bsonData = BSON.serialize(data);
+    //     fs.writeFileSync(ServiceManager.serviceListPath, bsonData);
+    // }
+
+    // public static read() {
+    //     const bsonFileBuffer = fs.readFileSync(ServiceManager.serviceListPath);
+
+    //     // Deserialize the BSON data back to an object
+    //     const deserializedData = BSON.deserialize(bsonFileBuffer);
+    //     console.log("Deserialized Data:", deserializedData);
+    // }
+}
