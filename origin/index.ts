@@ -8,7 +8,7 @@ import Route from "@components/constellation/components/Route";
 
 export const configuration = YAML.parse(fs.readFileSync("./Configuration.yml", 'utf8'));
 
-const constellation = new Constellation(Constellation.fetchDirname(import.meta.url), "/Routes/");
+const constellation = new Constellation(Constellation.fetchDirname(import.meta.url), "/routes/");
 
 constellation.listen(configuration.SERVER.PORT, configuration.SERVER.IP_ADDRESS, async () => {
     const accentColor: number[] = configuration.SERVER.RGB;

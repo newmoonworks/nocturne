@@ -2,10 +2,10 @@ import { ServiceStatus, IService } from "../../types";
 import Timer from "./Timer";
 
 import { spawn, exec, ChildProcess } from "child_process";
-import { uuid } from 'uuidv4';
-import fs from "fs";
-import path from "path";
 
+/**
+ * Service holds all permanent service information pulled from the BSON file, as well as temporary, in-memory information.
+ */
 export default class Service implements IService { 
     public process: ChildProcess = null;
     public name: string;
@@ -23,6 +23,9 @@ export default class Service implements IService {
         if (attributes?.execute) this.execute = attributes.execute;
     }
 
+    /**
+     * Starts the node.js process, and listens for its events.
+     */
     public async start(): Promise<void> {
         new Promise((resolve, reject) => {
             if (this.status == ServiceStatus.IDLE || this.status == ServiceStatus.ONLINE) reject(new Error("Service is already running"));
@@ -56,6 +59,9 @@ export default class Service implements IService {
         this.status = ServiceStatus.OFFLINE;
     }
 
+    /**
+     * Starts the node.js process not just from the path, but with the specified NPM command.
+     */
     private controlledRun(): void {
         this.process = spawn('npm', [this.execute], {
             cwd: this.path,
@@ -67,6 +73,4 @@ export default class Service implements IService {
     private pathRun(): void {
         this.process = spawn('node', [this.path], { stdio: 'inherit' });
     }
-
-
 }

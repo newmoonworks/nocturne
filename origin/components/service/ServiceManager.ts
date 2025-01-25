@@ -19,6 +19,9 @@ interface DeserializedData {
 }
 
 
+/**
+ * ServiceManager allows you to manipulate, identify, and retreive services from in memory, and the BSON file.
+ */
 export default class ServiceManager {
     private static readonly __filename = fileURLToPath(import.meta.url);
     private static readonly __dirname = dirname(ServiceManager.__filename);
@@ -30,22 +33,28 @@ export default class ServiceManager {
         ServiceManager.initializeServices();
     }
 
-    private static getDeserializedData():  DeserializedData {
+    /**
+     * Returns record of JSON data deserialized from bytes.
+     * 
+     * @returns 
+     */
+    private static getDeserializedData(): DeserializedData {
         let deserializedData:  DeserializedData;
     
         // Check if the file exists and is not empty
         if (fs.existsSync(this.serviceListPath) && fs.statSync(this.serviceListPath).size > 0) {
             const bsonFileBuffer = fs.readFileSync(this.serviceListPath);
-            deserializedData = BSON.deserialize(bsonFileBuffer) as  DeserializedData;
+            deserializedData = BSON.deserialize(bsonFileBuffer) as DeserializedData;
         } else {
             // Initialize with a default structure if file is empty or missing
             deserializedData = { services: [] };
         }
 
-        return deserializedData as  DeserializedData;
+        return deserializedData as DeserializedData;
     }
 
     /**
+     * Creates a new service object, writes it to the BSON file, and creates a service instance and pushes it to the service array in memory.
      * 
      * @param name 
      * @param path 
@@ -61,7 +70,7 @@ export default class ServiceManager {
             path: path,
             uuid: generatedUUID,
             execute: execute
-        } as JSONService ;
+        } as JSONService;
     
         // Add the new service to the list
         deserializedData.services.push(service);
@@ -71,11 +80,12 @@ export default class ServiceManager {
         fs.writeFileSync(this.serviceListPath, updatedBsonData);
     
         // Initialize the service in memory
-        console.log("service made")
         return await this.initializeService(name, path, generatedUUID, execute);
     }
 
     /**
+     * Finds the service in BSON file and deletes it from the temporary array.
+     * terminateService is called to then remove the service from the memory.
      * 
      * @param uuid 
      */
@@ -103,6 +113,7 @@ export default class ServiceManager {
     
 
     /**
+     * Takes parameters and creates a new instance of a service, pushing it into the service list.
      * 
      * @param name 
      * @param path 
@@ -116,16 +127,15 @@ export default class ServiceManager {
         
                 ServiceManager.serviceList.push(service);
         
-                // Resolve the promise with the created service
                 resolve(service);
             } catch (error) {
-                // Reject the promise with an error if something goes wrong
                 reject(error);
             }
         });
     }
 
     /**
+     * Deletes service from array in memory, identifying the service to delete through the service object itself, the UUID, or the index of it.
      * 
      * @param criterea 
      * @returns 
@@ -146,6 +156,7 @@ export default class ServiceManager {
     }
 
     /**
+     * Loops through all recorded services in the BSON file and initializes them in the memory.
      * 
      */
     private static initializeServices(): void {
@@ -159,34 +170,17 @@ export default class ServiceManager {
         }
     }
 
+    /**
+     * Returns the service instance from the array, identified by the UUID of the service.
+     * 
+     * @param uuid 
+     * @returns 
+     */
     public static fetchService(uuid: string): Service | null {
         for (const service of ServiceManager.serviceList) {
-            console.log("searched")
-            if (service.uuid == uuid) {
-                console.log("gotcha")
-                return service;
-            }
+            if (service.uuid == uuid) return service;
         }
 
         return null;
     }
-
-    // public static write() {
-    //     const data = {
-    //         name: "a service",
-    //         path: "../test.js",
-    //         uuid: "dsadsadadsa"
-    //     }
-
-    //     const bsonData = BSON.serialize(data);
-    //     fs.writeFileSync(ServiceManager.serviceListPath, bsonData);
-    // }
-
-    // public static read() {
-    //     const bsonFileBuffer = fs.readFileSync(ServiceManager.serviceListPath);
-
-    //     // Deserialize the BSON data back to an object
-    //     const deserializedData = BSON.deserialize(bsonFileBuffer);
-    //     console.log("Deserialized Data:", deserializedData);
-    // }
 }
