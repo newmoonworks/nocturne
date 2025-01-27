@@ -1,4 +1,4 @@
-import { ServiceStatus } from "@types";
+import { DeserializedData, JSONService, ServiceStatus } from "@types";
 import Service from "./Service";
 
 import { BSON, Document } from "bson";
@@ -7,20 +7,9 @@ import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
 import { uuid } from 'uuidv4';
 
-interface JSONService {
-    name: string;
-    path: string;
-    uuid: string;
-    execute?: string;
-}
-
-interface DeserializedData {
-    services: JSONService[];
-}
-
-
 /**
- * ServiceManager allows you to manipulate, identify, and retreive services from in memory, and the BSON file.
+ * ServiceManager allows you to manipulate, identify, and retreive services from in-memory, and the BSON file.
+ * ServiceManager also provides methods that ensure the data in the BSON file will be synchronized with the in-memory service instances.
  */
 export default class ServiceManager {
     private static readonly __filename = fileURLToPath(import.meta.url);
@@ -54,6 +43,16 @@ export default class ServiceManager {
     }
 
     /**
+     * Saves modified JSON object, serializes it back into BSON, then writes the new content to the BSON file.
+     * 
+     * @param data 
+     */
+    private static saveDeserializedData(data: DeserializedData): void {
+        const updatedBsonData = BSON.serialize(data);
+        fs.writeFileSync(this.serviceListPath, updatedBsonData);
+    }
+
+    /**
      * Creates a new service object, writes it to the BSON file, and creates a service instance and pushes it to the service array in memory.
      * 
      * @param name 
@@ -76,8 +75,7 @@ export default class ServiceManager {
         deserializedData.services.push(service);
     
         // Serialize the updated data and write it back to the file
-        const updatedBsonData = BSON.serialize(deserializedData);
-        fs.writeFileSync(this.serviceListPath, updatedBsonData);
+        this.saveDeserializedData(deserializedData);
     
         // Initialize the service in memory
         return await this.initializeService(name, path, generatedUUID, execute);
@@ -99,8 +97,7 @@ export default class ServiceManager {
                     deserializedData.services.splice(i, 1);
                     ServiceManager.terminateService({ index: i });
     
-                    const updatedBsonData = BSON.serialize(deserializedData);
-                    fs.writeFileSync(this.serviceListPath, updatedBsonData);
+                    this.saveDeserializedData(deserializedData)
                     resolve();
                     return; // Exit after resolving.
                 }
@@ -160,10 +157,7 @@ export default class ServiceManager {
      * 
      */
     private static initializeServices(): void {
-        const bsonFileBuffer = fs.readFileSync(ServiceManager.serviceListPath);
-
-        // Deserialize the BSON data back to an object
-        const deserializedData = BSON.deserialize(bsonFileBuffer);
+        const deserializedData = this.getDeserializedData();
 
         for (const service of deserializedData.services) {
             this.initializeService(service.name, service.path, service.uuid, service.execute);
@@ -182,5 +176,28 @@ export default class ServiceManager {
         }
 
         return null;
+    }
+
+    /**
+     * Writes new data to the specified service, and specified parameter.
+     * 
+     * @param uuid 
+     * @param key 
+     * @param value 
+     */
+    public static async alterBSONServiceParameter(uuid: string, key: keyof JSONService, value: JSONService[keyof JSONService]): Promise<void> {
+        new Promise<void>((resolve, reject) => {
+            let deserializedData = ServiceManager.getDeserializedData();
+
+            const service = deserializedData.services.find((service) => service.uuid === uuid);
+
+            if (!service) reject(new Error(`Service ${uuid} not found in BSON file.`));
+
+            service[key] = value
+
+            this.saveDeserializedData(deserializedData);
+
+            resolve();
+        })
     }
 }

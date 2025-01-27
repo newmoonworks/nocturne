@@ -1,4 +1,5 @@
 import { ServiceStatus, IService } from "../../types";
+import ServiceManager from "./ServiceManager";
 import Timer from "./Timer";
 
 import { spawn, exec, ChildProcess } from "child_process";
@@ -72,5 +73,20 @@ export default class Service implements IService {
 
     private pathRun(): void {
         this.process = spawn('node', [this.path], { stdio: 'inherit' });
+    }
+
+    /**
+     * Updates the name of the service instance itself, as well as the BSON file object.
+     * 
+     * @param name 
+     */
+    public async alterName(name: string): Promise<void> {
+        try {
+            await ServiceManager.alterBSONServiceParameter(this.uuid, "name", name);
+            this.name = name; // Update the local property only after successful persistence.
+        } catch (error) {
+            console.error(`Failed to alter name: ${error.message}`);
+            throw error; // Propagate the error if needed.
+        }
     }
 }

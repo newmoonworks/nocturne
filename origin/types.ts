@@ -34,3 +34,14 @@ export type Uptime = {
     hours: number;
     days: number;
 }
+
+export interface JSONService {
+    name: string;
+    path: string;
+    uuid: string;
+    execute?: string;
+}
+
+export interface DeserializedData {
+    services: JSONService[];
+}
