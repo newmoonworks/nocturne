@@ -55,4 +55,11 @@ export default class Timer {
     public listen(): void {
         this.listening = !this.listening;
     }
+
+    public toString() {
+        return {
+            time: this.time,
+            started: this.started
+        }
+    }
 }

@@ -18,7 +18,9 @@ export default class ServiceManager {
 
     public static serviceList: Service[] = [];
 
-    constructor() {
+    constructor() {}
+
+    static {
         ServiceManager.initializeServices();
     }
 
@@ -28,7 +30,7 @@ export default class ServiceManager {
      * @returns 
      */
     private static getDeserializedData(): DeserializedData {
-        let deserializedData:  DeserializedData;
+        let deserializedData: DeserializedData;
     
         // Check if the file exists and is not empty
         if (fs.existsSync(this.serviceListPath) && fs.statSync(this.serviceListPath).size > 0) {
@@ -156,11 +158,11 @@ export default class ServiceManager {
      * Loops through all recorded services in the BSON file and initializes them in the memory.
      * 
      */
-    private static initializeServices(): void {
+    private static async initializeServices(): Promise<void> {
         const deserializedData = this.getDeserializedData();
 
         for (const service of deserializedData.services) {
-            this.initializeService(service.name, service.path, service.uuid, service.execute);
+            await this.initializeService(service.name, service.path, service.uuid, service.execute);
         }
     }
 

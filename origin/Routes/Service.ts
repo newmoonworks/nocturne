@@ -1,6 +1,7 @@
 import Service from "@components/service/Service";
 import Formation from "../components/constellation/components/Formation";
 import ServiceManager from "@components/service/ServiceManager";
+import Alert from "@components/Alert"
 import { IService } from "@types"
 
 async function getService(uuid: string): Promise<object> {
@@ -8,11 +9,17 @@ async function getService(uuid: string): Promise<object> {
 
     if (!service) return { error: "Service not found."};
 
-    return { success: service }
+    Alert.pull("Requesting data of " + service.uuid);
+
+    return { success: service.toString() };
 }
 
 async function getServices(): Promise<object> {
-    return { success: ServiceManager.serviceList }
+    const services = ServiceManager.serviceList.map(service => service.toString());
+
+    Alert.pull("Requesting data of all services...");
+
+    return { success: services };
 }
 
 async function constructService(body: Record<string, any>) {

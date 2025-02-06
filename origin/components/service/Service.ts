@@ -28,32 +28,34 @@ export default class Service implements IService {
      * Starts the node.js process, and listens for its events.
      */
     public async start(): Promise<void> {
-        new Promise((resolve, reject) => {
-            if (this.status == ServiceStatus.IDLE || this.status == ServiceStatus.ONLINE) reject(new Error("Service is already running"));
-
-            if (this.execute) this.controlledRun();
-            else this.pathRun();
-
-            this.timer.start();
-            this.status = ServiceStatus.ONLINE;
-
-            this.process.on('close', (code) => {
-                this.stop();
-            })
-
-            this.process.on('exit', (code) => {
-                this.stop();
-            })
-
-            this.process.on('error', (error) => {
+        if (this.status === ServiceStatus.IDLE || this.status === ServiceStatus.ONLINE) {
+            throw new Error("Service is already running");
+        }
+    
+        if (this.execute) {
+            this.controlledRun();
+        } else {
+            this.pathRun();
+        }
+    
+        this.status = ServiceStatus.ONLINE; // Indicate the process is initializing
+        this.timer.start();
+    
+        return new Promise<void>((resolve, reject) => {
+            this.process.once("error", (error) => {
                 this.status = ServiceStatus.CRASHED;
-
-                console.error('Failed to start process:', error);
+                console.error("Failed to start process:", error);
+                reject(error);
             });
-
-            resolve("Service successfully started");
+    
+            this.process.once("exit", () => this.stop());
+            this.process.once("close", () => this.stop());
+    
+            this.status = ServiceStatus.ONLINE;
+            resolve();
         });
     }
+    
 
     public async stop(): Promise<void> {
         this.timer.stop();
@@ -87,6 +89,17 @@ export default class Service implements IService {
         } catch (error) {
             console.error(`Failed to alter name: ${error.message}`);
             throw error; // Propagate the error if needed.
+        }
+    }
+
+    public toString() {
+        return {
+            name: this.name,
+            uuid: this.uuid,
+            path: this.path,
+            execute: this.execute,
+            status: this.status,
+            timer: this.timer.toString(),
         }
     }
 }

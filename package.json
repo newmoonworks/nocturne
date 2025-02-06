@@ -1,6 +1,6 @@
 {
-  "name": "iris",
-  "version": "1.0.0",
+  "name": "nocturne",
+  "version": "Nocturne 1.0.0",
   "description": "Node JS process manager",
   "main": "index.js",
   "scripts": {
