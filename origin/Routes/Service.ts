@@ -4,6 +4,11 @@ import ServiceManager from "@components/service/ServiceManager";
 import Alert from "@components/Alert"
 import { IService } from "@types"
 
+/**
+ * 
+ * @param uuid 
+ * @returns 
+ */
 async function getService(uuid: string): Promise<object> {
     const service: Service = ServiceManager.fetchService(uuid);
 
@@ -14,6 +19,10 @@ async function getService(uuid: string): Promise<object> {
     return { success: service.toString() };
 }
 
+/**
+ * 
+ * @returns 
+ */
 async function getServices(): Promise<object> {
     const services = ServiceManager.serviceList.map(service => service.toString());
 
@@ -22,26 +31,46 @@ async function getServices(): Promise<object> {
     return { success: services };
 }
 
+/**
+ * 
+ * @param body 
+ * @returns 
+ */
 async function constructService(body: Record<string, any>) {
     if (!body.name) return { error: "Name is a required parameter." };
     if (!body.path) return { error: "Path is a required parameter." };
 
     const service = await ServiceManager.constructService(body.name, body.path, body.execute);
 
+    Alert.construct(`Service ${service.uuid} has been created`);
+
     return { success: service };
 }
 
+/**
+ * 
+ * @param body 
+ * @returns 
+ */
 async function deconstructService(body: Record<string, any>) {
     if (!body.uuid) return { error: "UUID is a required parameter." };
 
     try {
         await ServiceManager.deconstructService(body.uuid);
+
+        Alert.deconstruct(`Service ${body.uuid} has been deconstructed`);
+
         return { success: `${body.uuid} has been successfully deconstructed.` };
     } catch (error) {
         return { error: "Service not found." };
     }
 }
 
+/**
+ * 
+ * @param body 
+ * @returns 
+ */
 async function alterServiceName(body: Record<string, any>) {
     if (!body.uuid) return { error: "UUID is a required parameter." };
     if (!body.name) return { error: "Name is a required parameter." };
@@ -55,9 +84,52 @@ async function alterServiceName(body: Record<string, any>) {
     return { success: "Service name has been updated." };
 }
 
+/**
+ * 
+ * @param body 
+ * @returns 
+ */
+async function stopService(body: Record<string, any>) {
+    if (!body.uuid) return { error: "UUID is a required parameter." };
+
+    const service = ServiceManager.fetchService(body.uuid)
+
+    if (!service) return { error: "Service not found." };
+
+    try {
+        await service.stop();
+
+        Alert.status(`${service.uuid} has been marked as stopped.`)
+
+        return { success: "Service has been marked as stopped." };
+    }catch(e) {
+        return { success: "Service is already marked as offline." };
+    }
+}
+
+async function startService(body: Record<string, any>) {
+    if (!body.uuid) return { error: "UUID is a required parameter." };
+
+    const service = ServiceManager.fetchService(body.uuid)
+
+    if (!service) return { error: "Service not found." };
+
+    try {
+        await service.start();
+
+        Alert.status(`${service.uuid} has been marked as started.`)
+
+        return { success: "Service has been marked as started." };
+    }catch(e) {
+        return { success: "Service is already marked as online." };
+    }
+}
+
 export default new Formation({ prefix: "/service" })
     .get('/fetch', async () => await getServices())
     .get('/fetch/:uuid', async (uuid: string) => await getService(uuid))
     .post('/construct', async (body: Record<string, any>) => await constructService(body))
     .post('/alter/name', async (body: Record<string, any>) => await alterServiceName(body))
+    .post('/alter/status/stop', async (body: Record<string, any>) => await stopService(body))
+    .post('/alter/status/start', async (body: Record<string, any>) => await startService(body))
     .delete('/deconstruct', async (body: Record<string, any>) => await deconstructService(body))
