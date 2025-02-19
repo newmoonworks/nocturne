@@ -95,6 +95,22 @@ export default class Service implements IService {
         }
     }
 
+    /**
+     * Updates the path of the service instance itself, as well as  the BSON file object.
+     * Path is used for running Node.JS scripts that do not require specialized NPM commands; Running the file directly.
+     * 
+     * @param path 
+     */
+    public async alterPath(path: string): Promise<void> {
+        try {
+            await ServiceManager.alterBSONServiceParameter(this.uuid, "path", path);
+            this.path = path;
+        } catch (error) {
+            console.error(`Failed to alter path: ${error.message}`);
+            throw error;
+        }
+    }
+
     public toString() {
         return {
             name: this.name,

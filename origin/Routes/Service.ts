@@ -5,6 +5,7 @@ import Alert from "@components/Alert"
 import { IService } from "@types"
 
 /**
+ * Pulls UUID-specified service from ServiceManager Memory Map.
  * 
  * @param uuid 
  * @returns 
@@ -20,6 +21,7 @@ async function getService(uuid: string): Promise<object> {
 }
 
 /**
+ * Pulls all services from ServiceManager Memory Map.
  * 
  * @returns 
  */
@@ -32,6 +34,8 @@ async function getServices(): Promise<object> {
 }
 
 /**
+ * Constructs a service from a name and path. All other required information is generated.
+ * New service is written into memory, as well as the BSON file.
  * 
  * @param body 
  * @returns 
@@ -75,13 +79,37 @@ async function alterServiceName(body: Record<string, any>) {
     if (!body.uuid) return { error: "UUID is a required parameter." };
     if (!body.name) return { error: "Name is a required parameter." };
 
-    const service = ServiceManager.fetchService(body.uuid)
+    const service = ServiceManager.fetchService(body.uuid);
 
     if (!service) return { error: "Service not found." };
 
-    await service.alterName(body.name);
+    await service.alterName(body.name)
+        .catch((e) => {
+            console.error(e);
+            return { error: "An unexpected error has occured whilst attempting to alter service name."};
+        });
 
     return { success: "Service name has been updated." };
+}
+
+/**
+ * 
+ */
+async function alterServicePath(body: Record<string, any>) {
+    if (!body.uuid) return { error: "UUID is a required parameter." };
+    if (!body.path) return { error: "Path is a required parameter." };
+
+    const service = ServiceManager.fetchService(body.uuid);
+
+    if (!service) return { error: "Service not found." };
+
+    await service.alterPath(body.path)
+        .catch((e) => {
+            console.error(e);
+            return { error: "An unexpected error has occured whilst attempting to alter service path."};
+        });
+
+    return { success: "Service path has been updated." };
 }
 
 /**
@@ -92,7 +120,7 @@ async function alterServiceName(body: Record<string, any>) {
 async function stopService(body: Record<string, any>) {
     if (!body.uuid) return { error: "UUID is a required parameter." };
 
-    const service = ServiceManager.fetchService(body.uuid)
+    const service = ServiceManager.fetchService(body.uuid);
 
     if (!service) return { error: "Service not found." };
 
@@ -103,14 +131,14 @@ async function stopService(body: Record<string, any>) {
 
         return { success: "Service has been marked as stopped." };
     }catch(e) {
-        return { success: "Service is already marked as offline." };
+        return { error: "Service is already marked as offline." };
     }
 }
 
 async function startService(body: Record<string, any>) {
     if (!body.uuid) return { error: "UUID is a required parameter." };
 
-    const service = ServiceManager.fetchService(body.uuid)
+    const service = ServiceManager.fetchService(body.uuid);
 
     if (!service) return { error: "Service not found." };
 
@@ -121,7 +149,26 @@ async function startService(body: Record<string, any>) {
 
         return { success: "Service has been marked as started." };
     }catch(e) {
-        return { success: "Service is already marked as online." };
+        return { error: "Service is already marked as online." };
+    }
+}
+
+async function restartService(body: Record<string, any>) {
+    if (!body.uuid) return { error: "UUID is a required parameter." };
+
+    const service = ServiceManager.fetchService(body.uuid);
+
+    if (!service) return { error: "Service not found." };
+
+    try {
+        await service.stop().then(() => {
+            service.start();
+        })
+
+        return { success: "Service has been marked as started."};
+    } catch(e) {
+        console.log(e);
+        return { error: "An unexpected error has occured." };
     }
 }
 
@@ -132,4 +179,5 @@ export default new Formation({ prefix: "/service" })
     .post('/alter/name', async (body: Record<string, any>) => await alterServiceName(body))
     .post('/alter/status/stop', async (body: Record<string, any>) => await stopService(body))
     .post('/alter/status/start', async (body: Record<string, any>) => await startService(body))
+    .post('/alter/status/restart', async (body: Record<string, any>) => await restartService(body))
     .delete('/deconstruct', async (body: Record<string, any>) => await deconstructService(body))
