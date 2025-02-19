@@ -46,11 +46,13 @@ export default class Service implements IService {
                 this.status = ServiceStatus.CRASHED;
                 console.error("Failed to start process:", error);
                 reject(error);
+                return;
             });
     
             this.process.once("exit", () => this.stop());
-            this.process.once("close", () => this.stop());
+            // this.process.once("close", () => this.stop()); // ALIAS
     
+            console.log("Setting to online")
             this.status = ServiceStatus.ONLINE;
             resolve();
         });
@@ -60,6 +62,7 @@ export default class Service implements IService {
     public async stop(): Promise<void> {
         this.timer.stop();
         this.status = ServiceStatus.OFFLINE;
+        console.log("setting to offline")
     }
 
     /**

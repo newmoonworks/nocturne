@@ -59,6 +59,7 @@ export default class Timer {
     public toString() {
         return {
             time: this.time,
+            uptime: this.getUptime(),
             started: this.started
         }
     }
