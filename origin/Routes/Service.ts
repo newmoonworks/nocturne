@@ -17,7 +17,7 @@ async function getService(uuid: string): Promise<object> {
 
     Alert.pull("Requesting data of " + service.uuid);
 
-    return { success: service.toString() };
+    return { success: service.toExposedServiceFormat() };
 }
 
 /**
@@ -26,7 +26,7 @@ async function getService(uuid: string): Promise<object> {
  * @returns 
  */
 async function getServices(): Promise<object> {
-    const services = ServiceManager.serviceList.map(service => service.toString());
+    const services = ServiceManager.serviceList.map(service => service.toExposedServiceFormat());
 
     Alert.pull("Requesting data of all services...");
 

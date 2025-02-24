@@ -25,18 +25,16 @@ constellation.listen(configuration.SERVER.PORT, configuration.SERVER.IP_ADDRESS,
     }, 150)
 });
 
-
 function formatRoutes(routes: Route[]): string {
     let collection: string = "";
 
+    const methodAccent: { [key: string]: ChalkInstance } = {
+        GET: chalk.magenta.bold,
+        POST: chalk.yellow.bold,
+        DELETE: chalk.red.bold
+    };
+
     for (const route of routes) {
-        const methodAccent: { [key: string]: ChalkInstance } = {
-            GET: chalk.magenta.bold,
-            POST: chalk.yellow.bold,
-            DELETE: chalk.red.bold
-        };
-
-
         collection += `    ${methodAccent[route.method](T.serialize(route.method))} ${route.path}\n`
     }
 

@@ -1,4 +1,5 @@
 import Timer from "./components/service/Timer";
+import { ChildProcess } from "child_process";
 
 export enum ServiceStatus {
     ONLINE = 0,
@@ -8,24 +9,40 @@ export enum ServiceStatus {
 }
 
 export interface IService {
-    process;
     name: string;
     path: string;
     status: ServiceStatus;
-    timer: Timer;
     execute?: string;
 }
 
 /**
- * Restricted and simplified data structure to be sent through HTTP, and used by other services.
+ * The concept of "Exposed" is a public data structure that hides 
+ * unnecessarily available properties of a class from being sent to a requesting client,
+ * or shows required details of a class that are otherwise not available due to a private or protected status.
+ * 
+ * For example, the Service class features a ChildProcess property that is private, and not needed information to be shared with other clients.
+ * On the other hand, "timer" is a private property that has uptime information that needs to be shared with other clients.
+ * 
+ * This practice is called "Data Encapsulation"
  */
-export type ShareableService = {
-    name: string;
-    path: string;
-    status: ServiceStatus;
-    started: Date;
-    Uptime: Uptime;
-    execute?: string;
+export type ExposedService = {
+    readonly uuid: string;
+    readonly name: string;
+    readonly path: string;
+    readonly status: ServiceStatus;
+    readonly timer: ExposedTimer;
+    readonly output: ExposedServiceOutputCache;
+    readonly execute?: string;
+}
+
+export type ExposedServiceOutputCache = {
+    readonly outputs: string[];
+}
+
+export type ExposedTimer = {
+    readonly time: number,
+    readonly uptime: Uptime,
+    readonly started: Date
 }
 
 export type Uptime = {

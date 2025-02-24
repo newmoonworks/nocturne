@@ -1,6 +1,7 @@
-import { ServiceStatus, IService } from "../../types";
+import { ServiceStatus, IService, ExposedService } from "../../types";
 import ServiceManager from "./ServiceManager";
 import Timer from "./Timer";
+import ServiceOutputCache from "./ServiceOutputCache";
 
 import { spawn, exec, ChildProcess } from "child_process";
 
@@ -8,20 +9,22 @@ import { spawn, exec, ChildProcess } from "child_process";
  * Service holds all permanent service information pulled from the BSON file, as well as temporary, in-memory information.
  */
 export default class Service implements IService { 
-    public process: ChildProcess = null;
     public name: string;
     public uuid: string;
     public path: string;
     public execute: string;
-    public timer: Timer = new Timer();
+
+    private process: ChildProcess = null;
+    private timer: Timer = new Timer();
     public status: ServiceStatus = ServiceStatus.OFFLINE;
+    private outputCache: ServiceOutputCache = new ServiceOutputCache();
 
     constructor(name: string, path: string, uuid: string, attributes?: { execute?: string; }) {
         this.name = name;
         this.path = path;
         this.uuid = uuid;
 
-        if (attributes?.execute) this.execute = attributes.execute;
+        this.execute = attributes?.execute ?? "";
     }
 
     /**
@@ -42,6 +45,8 @@ export default class Service implements IService {
         this.timer.start();
     
         return new Promise<void>((resolve, reject) => {
+            this.logOutput();
+            
             this.process.once("error", (error) => {
                 this.status = ServiceStatus.CRASHED;
                 console.error("Failed to start process:", error);
@@ -60,6 +65,10 @@ export default class Service implements IService {
     
 
     public async stop(): Promise<void> {
+        if (!this.process) throw new Error("Process has not been started.");
+        if (this.status != ServiceStatus.ONLINE) throw new Error("Process is not online.");
+
+        this.process.kill();
         this.timer.stop();
         this.status = ServiceStatus.OFFLINE;
         console.log("setting to offline")
@@ -78,6 +87,14 @@ export default class Service implements IService {
 
     private pathRun(): void {
         this.process = spawn('node', [this.path], { stdio: 'inherit' });
+    }
+
+    private logOutput(): void {
+        if (!this.process || this.status !== ServiceStatus.ONLINE) throw new Error("Service must be online to log output.");
+
+        this.process.stdout.on('data', (data) => {
+            this.outputCache.addOutput(data.toString());
+        })
     }
 
     /**
@@ -111,14 +128,15 @@ export default class Service implements IService {
         }
     }
 
-    public toString() {
+    public toExposedServiceFormat(): ExposedService {
         return {
-            name: this.name,
             uuid: this.uuid,
+            name: this.name,
             path: this.path,
             execute: this.execute,
             status: this.status,
-            timer: this.timer.toString(),
-        }
+            output: this.outputCache.toExposedFormat(),
+            timer: this.timer.toExposedFormat(),
+        } as ExposedService;
     }
 }

@@ -2,9 +2,9 @@ import { Uptime } from "../../types";
 
 export default class Timer {
     public time: number = 0;
-    public loop: NodeJS.Timeout = null;
+    private loop: NodeJS.Timeout = null;
     public started: Date = null;
-    public listening: boolean = false;
+    private listening: boolean = false;
 
     public constructor() {};
 
@@ -56,7 +56,7 @@ export default class Timer {
         this.listening = !this.listening;
     }
 
-    public toString() {
+    public toExposedFormat() {
         return {
             time: this.time,
             uptime: this.getUptime(),
