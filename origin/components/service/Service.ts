@@ -31,70 +31,129 @@ export default class Service implements IService {
      * Starts the node.js process, and listens for its events.
      */
     public async start(): Promise<void> {
-        if (this.status === ServiceStatus.IDLE || this.status === ServiceStatus.ONLINE) {
-            throw new Error("Service is already running");
-        }
+        if (this.isServiceRunning()) throw new Error("Service is already running.");
     
-        if (this.execute) {
-            this.controlledRun();
-        } else {
-            this.pathRun();
-        }
-    
-        this.status = ServiceStatus.ONLINE; // Indicate the process is initializing
+        this.status = ServiceStatus.STARTING;
         this.timer.start();
     
         return new Promise<void>((resolve, reject) => {
-            this.logOutput();
-            
-            this.process.once("error", (error) => {
+            try {
+                this.initializeProcess(async () => {
+                    try {
+                        this.logOutput();
+                        this.setupProcessListeners(reject);
+                        this.finalizeStartup(resolve, reject);
+                    } catch (error) {
+                        reject(error);
+                    }
+                });
+            } catch (error) {
                 this.status = ServiceStatus.CRASHED;
-                console.error("Failed to start process:", error);
-                reject(error);
-                return;
-            });
+                console.error("Failed to start service:", error);
+                reject(error instanceof Error ? error : new Error(String(error)));
+            }
+        });
+    }
     
-            this.process.once("exit", () => this.stop());
-            // this.process.once("close", () => this.stop()); // ALIAS
+    // Checks if the service is already running
+    private isServiceRunning(): boolean {
+        return [ServiceStatus.IDLE, ServiceStatus.ONLINE, ServiceStatus.STARTING].includes(this.status);
+    }
     
-            console.log("Setting to online")
-            this.status = ServiceStatus.ONLINE;
-            resolve();
+    // Starts the process using either controlledRun or pathRun
+    private initializeProcess(callback: () => void): void {
+        this.execute ? this.controlledRun(callback) : this.pathRun(callback);
+    }
+    
+    // Handles the final transition of the service to ONLINE
+    private finalizeStartup(resolve: () => void, reject: (error: Error) => void): void {
+        const startupTimeout = 500;
+
+        setTimeout(() => {
+            if (this.process && this.status === ServiceStatus.STARTING) {
+                console.log("Service is now online.");
+                this.status = ServiceStatus.ONLINE;
+                resolve();
+            } else {
+                reject(new Error("Unexpected service state after initialization."));
+            }
+        }, startupTimeout);
+    }
+    
+
+    private setupProcessListeners(reject: (reason?: any) => void): void {
+        this.process.on("error", (error) => {
+            this.status = ServiceStatus.CRASHED;
+            console.error("Failed to start process:", error);
+            console.log(":OMG CRASH SENT")
+            reject(error);
+        });
+
+        this.process.on("exit", (code, signal, error) => {
+            this.stop(code);
+            console.log(code)
+
+            reject(error);
+        });
+
+        this.process.on("SIGTERM", () => {
+            this.stop();
+        });
+
+        this.process.on("SIGINT", () => {
+            this.stop();
         });
     }
     
 
-    public async stop(): Promise<void> {
+    public async stop(code?: number): Promise<void> {
         if (!this.process) throw new Error("Process has not been started.");
-        if (this.status != ServiceStatus.ONLINE) throw new Error("Process is not online.");
 
         this.process.kill();
         this.timer.stop();
-        this.status = ServiceStatus.OFFLINE;
-        console.log("setting to offline")
+
+
+        if (code != 0 || !code) this.status = ServiceStatus.CRASHED;
+        else this.status = ServiceStatus.OFFLINE;
+
+        console.log("Process has been closed.");
+
+        this.process = null;
     }
 
     /**
      * Starts the node.js process not just from the path, but with the specified NPM command.
      */
-    private controlledRun(): void {
+    private controlledRun(callback: () => void): void {
         this.process = spawn('npm', [this.execute], {
             cwd: this.path,
             stdio: 'inherit',
             shell: true
         });
+
+        if (this.process) {
+            callback();
+        }
     }
 
-    private pathRun(): void {
-        this.process = spawn('node', [this.path], { stdio: 'inherit' });
+    private pathRun(callback: () => void): void {
+        this.process = spawn('node', [this.path], { stdio: 'pipe' });
+
+        if (this.process) {
+            callback();
+        }
     }
 
     private logOutput(): void {
-        if (!this.process || this.status !== ServiceStatus.ONLINE) throw new Error("Service must be online to log output.");
+        if (!this.process || !this.process.stdout) throw new Error("Service must be online to log output.");
 
         this.process.stdout.on('data', (data) => {
             this.outputCache.addOutput(data.toString());
         })
+
+        this.process.stderr.on('data', (data) => {
+            console.error(`Error: ${data.toString()}`)
+        });
     }
 
     /**
@@ -104,6 +163,8 @@ export default class Service implements IService {
      */
     public async alterName(name: string): Promise<void> {
         try {
+            if (!name || name.trim().length === 0) throw new Error();
+
             await ServiceManager.alterBSONServiceParameter(this.uuid, "name", name);
             this.name = name; // Update the local property only after successful persistence.
         } catch (error) {

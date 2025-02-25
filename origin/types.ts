@@ -2,10 +2,11 @@ import Timer from "./components/service/Timer";
 import { ChildProcess } from "child_process";
 
 export enum ServiceStatus {
-    ONLINE = 0,
-    IDLE = 1,
-    OFFLINE = 2,
-    CRASHED = 3,
+    STARTING = 0,
+    ONLINE = 1,
+    IDLE = 2,
+    OFFLINE = 3,
+    CRASHED = 4,
 }
 
 export interface IService {

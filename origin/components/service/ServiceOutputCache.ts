@@ -5,14 +5,13 @@ import YAML from "yaml";
 export const configuration = YAML.parse(fs.readFileSync("./Configuration.yml", 'utf8'));
 
 export default class ServiceOutputCache {
-    public outputs: string[];
+    public outputs: string[] = [];
     private static readonly LIMIT: number = configuration.SERVICE.LIMIT;
 
     constructor() {}
 
     public addOutput(output: string) {
         if (this.outputs.length >= ServiceOutputCache.LIMIT) this.outputs.splice(0, 1);
-        
         this.outputs.push(output);
     }
 
