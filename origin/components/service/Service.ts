@@ -2,6 +2,7 @@ import { ServiceStatus, IService, ExposedService } from "../../types";
 import ServiceManager from "./ServiceManager";
 import Timer from "./Timer";
 import ServiceOutputCache from "./ServiceOutputCache";
+import { resolve } from "path";
 
 import { spawn, exec, ChildProcess } from "child_process";
 
@@ -13,17 +14,21 @@ export default class Service implements IService {
     public uuid: string;
     public path: string;
     public execute: string;
+    public tag: string;
 
     private process: ChildProcess = null;
     private timer: Timer = new Timer();
     public status: ServiceStatus = ServiceStatus.OFFLINE;
     private outputCache: ServiceOutputCache = new ServiceOutputCache();
 
-    constructor(name: string, path: string, uuid: string, attributes?: { execute?: string; }) {
+    constructor(name: string, path: string, uuid: string, tag?: string, attributes?: { execute?: string; }) {
         this.name = name;
         this.path = path;
         this.uuid = uuid;
 
+        console.log("constructor: " + tag)
+
+        this.tag = tag ?? "";
         this.execute = attributes?.execute ?? "";
     }
 
@@ -180,16 +185,19 @@ export default class Service implements IService {
      * @param path 
      */
     public async alterPath(path: string): Promise<void> {
+        const modifiedPath = `${ServiceManager.servicePath}/${this.uuid}/${path}`;
+        const containeredPath: string = resolve(ServiceManager.__dirname, modifiedPath);
+
         try {
-            await ServiceManager.alterBSONServiceParameter(this.uuid, "path", path);
-            this.path = path;
+            await ServiceManager.alterBSONServiceParameter(this.uuid, "path", containeredPath);
+            this.path = containeredPath;
         } catch (error) {
             console.error(`Failed to alter path: ${error.message}`);
             throw error;
         }
     }
 
-    public toExposedServiceFormat(): ExposedService {
+    public toExposedFormat(): ExposedService {
         return {
             uuid: this.uuid,
             name: this.name,

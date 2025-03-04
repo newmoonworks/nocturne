@@ -33,6 +33,7 @@ export type ExposedService = {
     readonly status: ServiceStatus;
     readonly timer: ExposedTimer;
     readonly output: ExposedServiceOutputCache;
+    readonly tag?: string;
     readonly execute?: string;
 }
 
@@ -57,6 +58,7 @@ export interface JSONService {
     name: string;
     path: string;
     uuid: string;
+    tag?: string;
     execute?: string;
 }
 

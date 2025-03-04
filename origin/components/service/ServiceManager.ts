@@ -13,8 +13,9 @@ import { uuid } from 'uuidv4';
  */
 export default class ServiceManager {
     private static readonly __filename = fileURLToPath(import.meta.url);
-    private static readonly __dirname = dirname(ServiceManager.__filename);
+    public static readonly __dirname = dirname(ServiceManager.__filename);
     private static readonly serviceListPath: string = resolve(ServiceManager.__dirname, "../../../services.bson");
+    public static readonly servicePath: string = "../../../services";
 
     public static serviceList: Service[] = [];
 
@@ -61,15 +62,18 @@ export default class ServiceManager {
      * @param path 
      * @param execute 
      */
-    public static async constructService(name: string, path: string, execute?: string): Promise<Service> {
+    public static async constructService(name: string, path: string, tag?: string, execute?: string): Promise<Service> {
         let deserializedData = ServiceManager.getDeserializedData();
         const generatedUUID: string = uuid();
+
+        console.log("construct service - tag: " + tag)
     
         // Create the new service object
         const service = {
             name: name,
-            path: path,
+            path: `${ServiceManager.servicePath}/${path}`,
             uuid: generatedUUID,
+            tag: tag,
             execute: execute
         } as JSONService;
     
@@ -78,9 +82,32 @@ export default class ServiceManager {
     
         // Serialize the updated data and write it back to the file
         this.saveDeserializedData(deserializedData);
+        await this.constructDirectory(generatedUUID);
     
         // Initialize the service in memory
-        return await this.initializeService(name, path, generatedUUID, execute);
+        return await this.initializeService(name, path, generatedUUID, tag, execute);
+    }
+
+    /**
+     * Constructs a directory of the service, named by its UUID.
+     * 
+     * @param uuid 
+     * @returns 
+     */
+    private static async constructDirectory(uuid: string): Promise<void> {
+        const servicePath: string = `${ServiceManager.servicePath}/${uuid}`
+
+        const path: string = resolve(ServiceManager.__dirname, servicePath);
+
+        return new Promise<void>((resolve, reject) => {
+            if (fs.existsSync(path)) reject("Directory already exists");
+
+            fs.mkdir(path, { recursive: true }, (error) => {
+                if (error) reject(error);
+
+                resolve();
+            });
+        });
     }
 
     /**
@@ -99,7 +126,9 @@ export default class ServiceManager {
                     deserializedData.services.splice(i, 1);
                     ServiceManager.terminateService({ index: i });
     
-                    this.saveDeserializedData(deserializedData)
+                    this.saveDeserializedData(deserializedData);
+                    this.deconstructDirectory(uuid);
+
                     resolve();
                     return; // Exit after resolving.
                 }
@@ -108,6 +137,18 @@ export default class ServiceManager {
             console.log("UUID not found.");
             reject(new Error("Service not found."));
         });
+    }
+
+    /**
+     * Deletes the directory of the service
+     * 
+     * @param uuid 
+     */
+    public static deconstructDirectory(uuid: string): void {
+        const servicePath: string = `${ServiceManager.servicePath}/${uuid}`
+        const path: string = resolve(ServiceManager.__dirname, servicePath);
+
+        fs.rmSync(path, { recursive: true, force: true });
     }
     
 
@@ -119,10 +160,10 @@ export default class ServiceManager {
      * @param uuid 
      * @param execute 
      */
-    public static async initializeService(name: string, path: string, uuid: string, execute?: string): Promise<Service> {
+    public static async initializeService(name: string, path: string, uuid: string, tag?: string, execute?: string): Promise<Service> {
         return new Promise((resolve, reject) => {
             try {
-                const service = new Service(name, path, uuid, { execute });
+                const service = new Service(name, path, uuid, tag, { execute });
         
                 ServiceManager.serviceList.push(service);
         
@@ -162,7 +203,7 @@ export default class ServiceManager {
         const deserializedData = this.getDeserializedData();
 
         for (const service of deserializedData.services) {
-            await this.initializeService(service.name, service.path, service.uuid, service.execute);
+            await this.initializeService(service.name, service.path, service.uuid, service.tag, service.execute);
         }
     }
 

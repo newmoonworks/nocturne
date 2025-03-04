@@ -17,7 +17,7 @@ async function getService(uuid: string): Promise<object> {
 
     Alert.pull("Requesting data of " + service.uuid);
 
-    return { success: service.toExposedServiceFormat() };
+    return { success: service.toExposedFormat() };
 }
 
 /**
@@ -26,7 +26,7 @@ async function getService(uuid: string): Promise<object> {
  * @returns 
  */
 async function getServices(): Promise<object> {
-    const services = ServiceManager.serviceList.map(service => service.toExposedServiceFormat());
+    const services = ServiceManager.serviceList.map(service => service.toExposedFormat());
 
     Alert.pull("Requesting data of all services...");
 
@@ -44,7 +44,7 @@ async function constructService(body: Record<string, any>) {
     if (!body.name) return { error: "Name is a required parameter." };
     if (!body.path) return { error: "Path is a required parameter." };
 
-    const service = await ServiceManager.constructService(body.name, body.path, body.execute);
+    const service = await ServiceManager.constructService(body.name, body.path, body.tag, body.execute);
 
     Alert.construct(`Service ${service.uuid} has been created`);
 
@@ -177,6 +177,7 @@ export default new Formation({ prefix: "/service" })
     .get('/fetch/:uuid', async (uuid: string) => await getService(uuid))
     .post('/construct', async (body: Record<string, any>) => await constructService(body))
     .post('/alter/name', async (body: Record<string, any>) => await alterServiceName(body))
+    .post('/alter/path', async (body: Record<string, any>) => await alterServicePath(body))
     .post('/alter/status/stop', async (body: Record<string, any>) => await stopService(body))
     .post('/alter/status/start', async (body: Record<string, any>) => await startService(body))
     .post('/alter/status/restart', async (body: Record<string, any>) => await restartService(body))
