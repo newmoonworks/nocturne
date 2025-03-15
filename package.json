@@ -17,6 +17,7 @@
     "child_process": "^1.0.2",
     "fs": "^0.0.1-security",
     "path": "^0.12.7",
+    "pidusage": "^4.0.0",
     "tsconfig-paths": "^4.2.0",
     "uuidv4": "^6.2.13",
     "yaml": "^2.7.0"

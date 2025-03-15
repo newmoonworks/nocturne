@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import pjson from "../../package.json";
+import { configuration } from "../index";
 
 export default class Alert {
     constructor() {}
@@ -18,5 +19,11 @@ export default class Alert {
 
     public static status(message: string): void {
         console.log(chalk.bold.rgb(137, 59, 255)(pjson.version + " STATUS") + ` ${chalk.white(`| ${message}`)}`)
+    }
+
+    public static developer(message: string): void {
+        if (!configuration.SERVICE.DEVELOPER_MODE) return;
+        
+        console.log(chalk.bold.rgb(137, 59, 255)(pjson.version + " DEVELOPER") + ` ${chalk.white(`| ${message}`)}`)
     }
 }

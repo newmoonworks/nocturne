@@ -96,7 +96,6 @@ export default class ServiceManager {
      */
     private static async constructDirectory(uuid: string): Promise<void> {
         const servicePath: string = `${ServiceManager.servicePath}/${uuid}`
-
         const path: string = resolve(ServiceManager.__dirname, servicePath);
 
         return new Promise<void>((resolve, reject) => {

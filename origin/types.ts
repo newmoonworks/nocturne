@@ -33,7 +33,8 @@ export type ExposedService = {
     readonly status: ServiceStatus;
     readonly timer: ExposedTimer;
     readonly output: ExposedServiceOutputCache;
-    readonly tag?: string;
+    readonly benchmark: ExposedBenchmark;
+    readonly tag: string;
     readonly execute?: string;
 }
 
@@ -52,6 +53,12 @@ export type Uptime = {
     minutes: number;
     hours: number;
     days: number;
+}
+
+export type ExposedBenchmark = {
+    cpu: number;
+    memory: number;
+    storage: number;
 }
 
 export interface JSONService {
